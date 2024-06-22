@@ -273,7 +273,7 @@ class Game {
 
             return capture;
         } 
-
+        return default;
     }
     
     // Reverse a previous move that was made.  When calling this method,
