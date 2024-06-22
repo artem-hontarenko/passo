@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Cairo;
@@ -234,6 +234,31 @@ class Game {
     // Returns true if a capture was made.
     public bool move(Move m) {
 
+        Console.WriteLine("start");
+
+        for(int i = 0; i < 5; i++){
+            List<int> res = new List<int>();
+            for(int j = 0; j < 5; j++){
+                res.Add(squares[i, j]);
+            }
+            Console.WriteLine(string.Join(" ", res));
+        }
+
+        Console.WriteLine();
+
+        Console.WriteLine("state");
+
+        for(int i = 0; i < 5; i++){
+            List<int> res = new List<int>();
+            for(int j = 0; j < 5; j++){
+                res.Add(squaresState[i, j]);
+            }
+            Console.WriteLine(string.Join(" ", res));
+        }
+
+        Console.WriteLine();
+        
+
         if (validMove(m)) {
             Pos from = m.from, to = m.to;
             bool capture = squares[to.x, to.y] > 0;
@@ -253,6 +278,11 @@ class Game {
 
             // Find isolated islands after moving
             var isolatedIslands = IsolatedIslandsFinder.findIsolatedIslands(squares, squaresState);
+            foreach(var island in isolatedIslands){
+                foreach(var i in island){
+                    Console.WriteLine(i);
+                }
+            }
             Dictionary<(int, int), int> cells = new Dictionary<(int, int), int>();
             foreach (var island in isolatedIslands) {
                 foreach (var cell in island) {
@@ -270,6 +300,31 @@ class Game {
             // Switch turns and increment move count
             turn = 3 - turn;
             moves += 1;
+
+        Console.WriteLine($"{m.from.x} {m.from.y}");
+        Console.WriteLine($"{m.to.x} {m.to.y}");
+
+        Console.WriteLine("after");
+
+        for(int i = 0; i < 5; i++){
+            List<int> res = new List<int>();
+            for(int j = 0; j < 5; j++){
+                res.Add(squares[i, j]);
+            }
+            Console.WriteLine(string.Join(" ", res));
+        }
+
+        Console.WriteLine("state after");
+
+        for(int i = 0; i < 5; i++){
+            List<int> res = new List<int>();
+            for(int j = 0; j < 5; j++){
+                res.Add(squaresState[i, j]);
+            }
+            Console.WriteLine(string.Join(" ", res));
+        }
+
+        Console.WriteLine("finish");
 
             return capture;
         } else {
