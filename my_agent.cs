@@ -2,18 +2,39 @@ using System.Collections.Generic;
 using static System.Console;
 
 class MyAgent : Player {
-    // Check if a pawn at (x, y) is under attack
+
+    // Check if the position belongs to the board
+    bool isValid(int newX, int newY){
+        if(newX < 0 || newX > 4){
+            return false;
+        } else if(newY < 0 || newY > 4){
+            return false;
+        }
+        return true;
+    }
+    // Check if a disk at (x, y) is under attack
     bool underAttack(Game game, int x, int y) {
+        int[] rowDirect = { -1, -1, -1, 0, 0, 1, 1, 1 };
+        int[] colDirect = { -1, 0, 1, -1, 1, -1, 0, 1 };
+
         if (game.squares[x, y] == 1) { // red disk
-            return ((x - 1 >= 0 && y - 1 >= 0 && game.squares[x - 1, y - 1] == 2) ||
-                    (y - 1 >= 0 && game.squares[x, y - 1] == 2) ||
-                    (x + 1 <= 4 && y - 1 >= 0 && game.squares[x + 1, y - 1] == 2));
+            for(int i = 0; i < rowDirect.Length; i++){
+                int newX = x + rowDirect[i];
+                int newY = y + colDirect[i];
+                if(isValid(newX, newY) && game.squares[newX, newY] == 2){
+                    return true;
+                }
+            }
         }
 
         if (game.squares[x, y] == 2) { // black disk
-            return ((x - 1 >= 0 && y + 1 <= 4 && game.squares[x - 1, y + 1] == 1) ||
-                    (y + 1 <= 4 && game.squares[x, y + 1] == 1) ||
-                    (x + 1 <= 4 && y + 1 <= 4 && game.squares[x + 1, y + 1] == 1));
+            for(int i = 0; i < rowDirect.Length; i++){
+                int newX = x + rowDirect[i];
+                int newY = y + colDirect[i];
+                if(isValid(newX, newY) && game.squares[newX, newY] == 2){
+                    return true;
+                }
+            }
         }
         return false;
     }
