@@ -20,10 +20,11 @@ class MyAgent : Player {
 
     // Return true if the current player can win on their next move
     bool nextMoveWins(Game game) {
-        for (int x = 0; x < 5; x++) {
-            if (game.turn == 1 && game.squares[x, game.winLine().Item1] == 1) {
+        (int redWinLine, int blackWinLine) = game.winLine();
+        for (int x = 0; x < Game.Size; x++) {
+            if (game.turn == 1 && game.squares[x, redWinLine] == 1) {
                 return true;
-            } else if (game.turn == 2 && game.squares[x, game.winLine().Item2] == 2) {
+            } else if (game.turn == 2 && game.squares[x, blackWinLine] == 2) {
                 return true;
             }
         }
@@ -35,21 +36,15 @@ class MyAgent : Player {
         if (nextMoveWins(game))
             return game.turn == 1 ? 1000 : -1000;
 
-        for (int x = 0; x < 5; ++x) {
-            if (game.turn == 1 && game.squares[x, game.winLine().Item2] == 2 && !underAttack(game, x, 5)) {
-                return -1000;
-            } else if (game.turn == 2 && game.squares[x, game.winLine().Item1] == 1 && !underAttack(game, x, 1)) {
-                return 1000;
-            }
-        }
-
         int v = 0;
-        for (int x = 0; x < 5; ++x) {
-            for (int y = 0; y < 5; ++y) {
+        for (int x = 0; x < Game.Size; ++x) {
+            for (int y = 0; y < Game.Size; ++y) {
                 if (game.squares[x, y] == 1) {
-                    v += 25 - (game.winLine().Item2 + y);
+                    v += 5 * (Game.Size - y); // Red pieces closer to top have higher value
+                    if (!underAttack(game, x, y)) v += 2; // Bonus for safe pieces
                 } else if (game.squares[x, y] == 2) {
-                    v -= 25 + (game.winLine().Item2 - y);
+                    v -= 5 * y; // Black pieces closer to bottom have higher value
+                    if (!underAttack(game, x, y)) v -= 2; // Bonus for safe pieces
                 }
             }
         }
@@ -61,9 +56,9 @@ class MyAgent : Player {
         bestMove = null!;
 
         if (game.winner == 1)
-            return 1000;   // player 1 has already won
+            return 1000;   // red player has already won
         if (game.winner == 2)
-            return -1000;  // player 2 has already won
+            return -1000;  // black player has already won
 
         if (depth == 0)  
             return eval(game);  
@@ -72,37 +67,34 @@ class MyAgent : Player {
         int bestVal = maximizing ? int.MinValue : int.MaxValue;
 
         foreach (Move move in game.possibleMoves()) {
-            Console.WriteLine($"Minimax evaluating move: {move.from} -> {move.to} at depth {depth}");
-            
             bool capture = game.move(move);
             int w = minimax(game, depth - 1, alpha, beta, out Move _);
             game.unmove(move, capture);
-
-            Console.WriteLine($"Undone move");
 
             if (maximizing ? w > bestVal : w < bestVal) {
                 bestVal = w;
                 bestMove = move;
                 if (maximizing) {
+                    alpha = Math.Max(alpha, bestVal);
                     if (bestVal >= beta) {
-                        return bestVal;
+                        break;
                     }
-                    alpha = alpha > bestVal ? alpha : bestVal;
                 } else {
+                    beta = Math.Min(beta, bestVal);
                     if (bestVal <= alpha) {
-                        return bestVal;
+                        break;
                     }
-                    beta = beta < bestVal ? beta : bestVal;
                 }
             }
         }
         return bestVal;
     }
 
-    // Choose the best move
+    // Choose the best move with dynamic depth adjustment
     public Move chooseMove(Game game) {
-        // Search to 2 plies.
-        minimax(game, 3, -1000, +1000, out Move best);
+        int pieceCount = game.pieces[1] + game.pieces[2];
+        int depth = pieceCount > 7 ? 2 : 3; // Adjust depth dynamically
+        minimax(game, depth, -1000, 1000, out Move best);
         return best;
     }
 }
