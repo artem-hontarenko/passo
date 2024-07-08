@@ -21,7 +21,6 @@ class Move {
 
 class IsolatedIslandsFinder {
     public static List<List<(int, int)>> findIsolatedIslands(int[,] matrix, int[,] active) {
-        int size = matrix.GetLength(0);
         List<List<(int, int)>> islands = FindAllIslands(active);
         List<List<(int, int)>> islandsNew = new List<List<(int, int)>>();
 
@@ -102,6 +101,9 @@ class Game {
 
     // Dictionary to store the island cells
     public Dictionary<(int, int), int> diction =  new Dictionary<(int, int), int>();
+
+    // Stack of dictionaries to store the island cells
+    public Stack<Dictionary<(int, int), int>> dictionStack = new Stack<Dictionary<(int, int), int>>();
     
     // pieces[p] is the number of pieces currently owned by player p.
     // (The dummy entry pieces[0] is unused.)
@@ -144,7 +146,8 @@ class Game {
                            pos.y >= 0 && pos.y < Game.Size;
     
     // Return true if the given move is valid.
-    public bool validMove(Move move) {
+ public bool validMove(Move move) {
+    if (move != null) {
         Pos from = move.from, to = move.to;
 
         // Check if the target position is valid
@@ -171,23 +174,29 @@ class Game {
         if (squaresState[to.x, to.y] != 0) {
             return false;
         }
+
         return true;
+    } else {
+        winner = 3;
+        return false;
     }
-    
+}
+   
     // Return a list of all possible moves for the current player.
     public List<Move> possibleMoves() {
         int[] rowDirect = {-1, -1, -1, 0, 0, 1, 1, 1};
         int[] colDirect = {-1, 0, 1, -1, 1, -1, 0, 1};
 
         var ret = new List<Move>();
-        for (int x = 0 ; x < Size ; ++x)
-            for (int y = 0 ; y < Size ; ++y)
+        for (int x = 0; x < Size; ++x)
+            for (int y = 0; y < Size; ++y)
                 if (squares[x, y] == turn) {
                     Pos from = new Pos(x, y);
-                    for (int adjCell = 0; adjCell < rowDirect.Length ; ++adjCell) {
+                    for (int adjCell = 0; adjCell < rowDirect.Length; ++adjCell) {
                         Move move = new Move(from, new Pos(x + rowDirect[adjCell], y + colDirect[adjCell]));
-                        if (validMove(move))
+                        if (validMove(move)) {
                             ret.Add(move);
+                        }
                     }
                 }
         return ret;
@@ -233,7 +242,6 @@ class Game {
     // Update the game by having the current player make the given move.
     // Returns true if a capture was made.
     public bool move(Move m) {
-
         if (validMove(m)) {
             Pos from = m.from, to = m.to;
             bool capture = squares[to.x, to.y] > 0;
@@ -242,28 +250,26 @@ class Game {
             squares[from.x, from.y] = 0;
             squares[to.x, to.y] = turn;
 
-            // Update pieces count and check for winner
-            if (capture)
-                pieces[3 - turn] -= 1;
-            if ((turn == 1 && to.y == winLine().Item1) || (turn == 2 && to.y == winLine().Item2) || pieces[3 - turn] == 0)
-                winner = turn;
-
-            // Find isolated islands after moving
             var isolatedIslands = IsolatedIslandsFinder.findIsolatedIslands(squares, squaresState);
-            
+
             Dictionary<(int, int), int> cells = new Dictionary<(int, int), int>();
             foreach (var island in isolatedIslands) {
                 foreach (var cell in island) {
                     cells[cell] = squares[cell.Item1, cell.Item2]; // Store the state before marking inactive
-                    squares[cell.Item1, cell.Item2] = 0;
-                    if(squares[cell.Item1, cell.Item2] != 0){
+                    if (squares[cell.Item1, cell.Item2] != 0) {
                         pieces[squares[cell.Item1, cell.Item2]] -= 1;
                         squares[cell.Item1, cell.Item2] = 0;
                     }
                     squaresState[cell.Item1, cell.Item2] = 1;
                 }
             }
-            diction = cells;
+            dictionStack.Push(cells);
+
+            // Update pieces count and check for winner
+            if (capture)
+                pieces[3 - turn] -= 1;
+            if ((turn == 1 && to.y == winLine().Item1) || (turn == 2 && to.y == winLine().Item2) || pieces[3 - turn] == 0)
+                winner = turn;
             
             // Update the state of the squares
             squaresState[from.x, from.y] = 1;
@@ -273,23 +279,30 @@ class Game {
 
             return capture;
         } 
-        return default;
+        return false;
     }
     
     // Reverse a previous move that was made.  When calling this method,
     // wasCapture must be true if the move was a capture.
     public void unmove(Move m, bool wasCapture) {
-        foreach(KeyValuePair<(int, int), int> p in diction){
-            squares[p.Key.Item1, p.Key.Item2] = p.Value;
-            pieces[squares[p.Key.Item1, p.Key.Item2]] += 1;
-            squaresState[p.Key.Item1, p.Key.Item2] = 1;
+        if (dictionStack.Count > 0) {
+            var cells = dictionStack.Pop();
+            foreach (var cell in cells) {
+                squares[cell.Key.Item1, cell.Key.Item2] = cell.Value;
+                if (cell.Value != 0) {
+                    pieces[cell.Value] += 1;
+                }
+                squaresState[cell.Key.Item1, cell.Key.Item2] = 0;
+            }
         }
         Pos from = m.from, to = m.to;
         moves -= 1;
         turn = 3 - turn;
         winner = 0;
-        if (wasCapture)
+
+        if (wasCapture) {
             pieces[3 - turn] += 1;
+        }
         squares[to.x, to.y] = wasCapture ? 3 - turn : 0;
         squares[from.x, from.y] = turn;
         squaresState[from.x, from.y] = 0;
