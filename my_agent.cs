@@ -39,24 +39,8 @@ class MyAgent : Player {
         return false;
     }
 
-    // Return true if the current player can win on their next move
-    bool nextMoveWins(Game game) {
-        (int redWinLine, int blackWinLine) = game.winLine();
-        for (int x = 0; x < Game.Size; x++) {
-            if (game.turn == 1 && game.squares[x, redWinLine] == 1) {
-                return true;
-            } else if (game.turn == 2 && game.squares[x, blackWinLine] == 2) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     // Evaluate the game position and return a value between +1000 and -1000
     int eval(Game game) {
-        if (nextMoveWins(game))
-            return game.turn == 1 ? 1000 : -1000;
-
         int v = 0;
         for (int x = 0; x < Game.Size; ++x) {
             for (int y = 0; y < Game.Size; ++y) {
@@ -73,43 +57,56 @@ class MyAgent : Player {
     }
 
     // Minimax algorithm with alpha-beta pruning
-    int minimax(Game game, int depth, int alpha, int beta, out Move bestMove) {
-        bestMove = null!;
+int minimax(Game game, int depth, int alpha, int beta, out Move bestMove) {
+    bestMove = null!;
 
-        if (game.winner == 1)
-            return 1000;   // red player has already won
-        if (game.winner == 2)
-            return -1000;  // black player has already won
+    if (game.winner == 1)
+        return 1000;   // red player has already won
+    if (game.winner == 2)
+        return -1000;  // black player has already won
 
-        if (depth == 0)  
-            return eval(game);  
+    if (depth == 0){  
+        return eval(game);  
+    }
 
-        bool maximizing = game.turn == 1;
-        int bestVal = maximizing ? int.MinValue : int.MaxValue;
+    if(game.possibleMoves().Count == 0 || game.pieces[game.turn] == 0){
+        game.winner = 3 - game.turn;
+        if(game.winner == 1){
+            return 1000;
+        }
+        else{
+            return -1000;
+        }
+    }
 
+    bool maximizing = game.turn == 1;
+    int bestVal = maximizing ? int.MinValue : int.MaxValue;
+
+    if(game.possibleMoves().Count > 0){    
         foreach (Move move in game.possibleMoves()) {
-            bool capture = game.move(move);
-            int w = minimax(game, depth - 1, alpha, beta, out Move _);
-            game.unmove(move, capture);
+        bool capture = game.move(move);
+        int w = minimax(game, depth - 1, alpha, beta, out Move _);
+        game.unmove(move, capture);
 
-            if (maximizing ? w > bestVal : w < bestVal) {
-                bestVal = w;
-                bestMove = move;
-                if (maximizing) {
-                    alpha = Math.Max(alpha, bestVal);
-                    if (bestVal >= beta) {
-                        break;
-                    }
-                } else {
-                    beta = Math.Min(beta, bestVal);
-                    if (bestVal <= alpha) {
-                        break;
-                    }
+        if (maximizing ? w > bestVal : w < bestVal) {
+            bestVal = w;
+            bestMove = move;
+            if (maximizing) {
+                alpha = Math.Max(alpha, bestVal);
+                if (bestVal >= beta) {
+                    break;
+                }
+            } else {
+                beta = Math.Min(beta, bestVal);
+                if (bestVal <= alpha) {
+                    break;
                 }
             }
         }
-        return bestVal;
     }
+    }
+    return bestVal;
+}
 
     // Choose the best move with dynamic depth adjustment
     public Move chooseMove(Game game) {
